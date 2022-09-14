@@ -1017,7 +1017,6 @@ contract PolyMath is ERC20, Ownable {
     address public liquidityWallet;
     address public immutable deadAddress =
         0x000000000000000000000000000000000000dEaD;
-
     address public immutable USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
     USDCManager public usdcManager;
 
@@ -1038,6 +1037,13 @@ contract PolyMath is ERC20, Ownable {
     uint256 public totalFees;
 
     bool public swapAndLiquifyEnabled = false;
+
+    bool public limitsInEffect = true;
+    bool public transferDelayEnabled = true;
+    // mapping(address => uint256) private _holderLastTransferTimestamp;
+    mapping(address => bool) public _isExcludedMaxTransactionAmount;
+    uint256 public maxWallet;
+    uint256 public maxTransactionAmount;
 
     // exlcude from fees and max transaction amount
     mapping(address => bool) private _isExcludedFromFees;
@@ -1102,11 +1108,21 @@ contract PolyMath is ERC20, Ownable {
         _setAutomatedMarketMakerPair(_uniswapV2Pair, true);
         _setAutomatedMarketMakerPair(address(this), true);
 
+        excludeFromMaxTransaction(address(_uniswapV2Router), true);
+        excludeFromMaxTransaction(address(uniswapV2Pair), true);
+
+        excludeFromMaxTransaction(owner(), true);
+        excludeFromMaxTransaction(address(this), true);
+        excludeFromMaxTransaction(address(0xdead), true);
         // exclude from paying fees or having max transaction amount
         excludeFromFees(liquidityWallet, true);
 
         excludeFromFees(address(this), true);
         _isExcludedFromFees[owner()] = true;
+
+        maxWallet = (1000000 * (10**18) * 1) / 100; // 1% Max wallet
+        maxTransactionAmount = (1000000 * (10**18) * 1) / 100; // 1% maxTransactionAmountTxn
+
         // enable owner and fixed-sale wallet to send tokens before presales are over
 
         /*
@@ -1175,7 +1191,7 @@ contract PolyMath is ERC20, Ownable {
         public
         onlyOwner
     {
-        require(newLiquidityWallet != liquidityWallet, "update kr");
+        require(newLiquidityWallet != liquidityWallet);
         excludeFromFees(newLiquidityWallet, true);
         emit LiquidityWalletUpdated(newLiquidityWallet, liquidityWallet);
         liquidityWallet = newLiquidityWallet;
@@ -1183,6 +1199,19 @@ contract PolyMath is ERC20, Ownable {
 
     function isExcludedFromFees(address account) public view returns (bool) {
         return _isExcludedFromFees[account];
+    }
+
+    function removeLimits() external onlyOwner returns (bool) {
+        limitsInEffect = false;
+        transferDelayEnabled = false;
+        return true;
+    }
+
+    function excludeFromMaxTransaction(address updAds, bool isEx)
+        public
+        onlyOwner
+    {
+        _isExcludedMaxTransactionAmount[updAds] = isEx;
     }
 
     function _transfer(
@@ -1196,6 +1225,42 @@ contract PolyMath is ERC20, Ownable {
         if (amount == 0) {
             super._transfer(from, to, 0);
             return;
+        }
+
+        if (limitsInEffect) {
+            if (
+                from != owner() &&
+                to != owner() &&
+                to != address(0) &&
+                to != address(0xdead) &&
+                !swapping
+            ) {
+                //when buy
+                if (
+                    automatedMarketMakerPairs[from] &&
+                    !_isExcludedMaxTransactionAmount[to]
+                ) {
+                    require(
+                        amount + balanceOf(to) <= maxWallet,
+                        "Unable to exceed Max Wallet"
+                    );
+                }
+                //when sell
+                else if (
+                    automatedMarketMakerPairs[to] &&
+                    !_isExcludedMaxTransactionAmount[from]
+                ) {
+                    require(
+                        amount <= maxTransactionAmount,
+                        "Sell transfer amount exceeds the maxTransactionAmount."
+                    );
+                } else if (!_isExcludedMaxTransactionAmount[to]) {
+                    require(
+                        amount + balanceOf(to) <= maxWallet,
+                        "Unable to exceed Max Wallet"
+                    );
+                }
+            }
         }
 
         if (

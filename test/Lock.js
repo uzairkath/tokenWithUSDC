@@ -47,13 +47,14 @@ describe("PolyMath", function () {
     const blockBefore = await ethers.provider.getBlock(blockNumBefore);
     const timestampBefore = blockBefore.timestamp;
     console.log(timestampBefore);
-    await pmf.approve(router02.address, 1000000);
-    await USDC.approve(router02.address, 1000000);
+    console.log(ethers.utils.parseEther("0.000001"));
+    await pmf.approve(router02.address, ethers.utils.parseEther("100000"));
+    await USDC.approve(router02.address, ethers.utils.parseEther("0.000001"));
     await router02.addLiquidity(
       pmf.address,
       USDC.address,
-      1000000,
-      1000000,
+      ethers.utils.parseEther("100000"),
+      ethers.utils.parseEther("0.0000001"),
       0,
       0,
       owner.getAddress(),
@@ -69,22 +70,30 @@ describe("PolyMath", function () {
     const blockNumBefore = await ethers.provider.getBlockNumber();
     const blockBefore = await ethers.provider.getBlock(blockNumBefore);
     const timestampBefore = blockBefore.timestamp;
-    await USDC.connect(addr1).approve(router02.address, 1000000);
+    await USDC.connect(addr1).approve(
+      router02.address,
+      ethers.utils.parseEther("1")
+    );
+    await pmf.removeLimits();
 
     let path = [USDC.address, pmf.address];
     for (let i = 1; i <= 100; i++) {
       await router02
         .connect(addr1)
         .swapExactTokensForTokensSupportingFeeOnTransferTokens(
-          1000,
+          ethers.utils.parseEther("0.000000001"),
           0,
           path,
           addr1.address,
           timestampBefore + 5 * i
         );
     }
-    console.log(await pmf.balanceOf(addr1.address));
-    console.log(await pmf.balanceOf(pmf.address));
+    console.log(
+      ethers.utils.formatUnits(await pmf.balanceOf(addr1.address), "ether")
+    );
+    console.log(
+      ethers.utils.formatUnits(await pmf.balanceOf(pmf.address), "ether")
+    );
   });
 
   // it("should swap the tokens for usdc", async function () {
@@ -98,19 +107,29 @@ describe("PolyMath", function () {
     const blockNumBefore = await ethers.provider.getBlockNumber();
     const blockBefore = await ethers.provider.getBlock(blockNumBefore);
     const timestampBefore = blockBefore.timestamp;
-    await pmf.connect(addr1).approve(router02.address, 85219);
+
+    await pmf
+      .connect(addr1)
+      .approve(
+        router02.address,
+        ethers.utils.parseUnits("9172399084149714", "wei")
+      );
     let path = [pmf.address, USDC.address];
     await router02
       .connect(addr1)
       .swapExactTokensForTokensSupportingFeeOnTransferTokens(
-        85219,
+        ethers.utils.parseUnits("9172399084149714", "wei"),
         0,
         path,
         addr1.address,
         timestampBefore + 20
       );
-    console.log(await pmf.balanceOf(addr1.address));
-    console.log(await pmf.balanceOf(pmf.address));
+    console.log(
+      ethers.utils.formatUnits(await pmf.balanceOf(addr1.address), "ether")
+    );
+    console.log(
+      ethers.utils.formatUnits(await pmf.balanceOf(pmf.address), "ether")
+    );
   });
 
   it("should change liquidity fee", async function () {
@@ -141,41 +160,57 @@ describe("PolyMath", function () {
     const blockNumBefore = await ethers.provider.getBlockNumber();
     const blockBefore = await ethers.provider.getBlock(blockNumBefore);
     const timestampBefore = blockBefore.timestamp;
-    await USDC.connect(addr1).approve(router02.address, 1000000);
+    await USDC.connect(addr1).approve(
+      router02.address,
+      ethers.utils.parseEther("1")
+    );
 
     let path = [USDC.address, pmf.address];
     for (let i = 1; i <= 100; i++) {
       await router02
         .connect(addr1)
         .swapExactTokensForTokensSupportingFeeOnTransferTokens(
-          1000,
+          ethers.utils.parseEther("0.000000000000001000"),
           0,
           path,
           addr1.address,
           timestampBefore + 5 * i
         );
     }
-    console.log(await pmf.balanceOf(addr1.address));
-    console.log(await pmf.balanceOf(pmf.address));
+    console.log(
+      ethers.utils.formatUnits(await pmf.balanceOf(addr1.address), "ether")
+    );
+    console.log(
+      ethers.utils.formatUnits(await pmf.balanceOf(pmf.address), "ether")
+    );
 
     console.log(addr1.address);
     // sell the tokens
     const _blockNumBefore = await ethers.provider.getBlockNumber();
     const _blockBefore = await ethers.provider.getBlock(_blockNumBefore);
     const _timestampBefore = _blockBefore.timestamp;
-    await pmf.connect(addr1).approve(router02.address, 81224);
+    await pmf
+      .connect(addr1)
+      .approve(
+        router02.address,
+        ethers.utils.parseUnits("9172398889594409", "wei")
+      );
     let _path = [pmf.address, USDC.address];
     await router02
       .connect(addr1)
       .swapExactTokensForTokensSupportingFeeOnTransferTokens(
-        81224,
+        ethers.utils.parseUnits("9172398889594409", "wei"),
         0,
         _path,
         addr1.address,
-        _timestampBefore + 300
+        _timestampBefore + 20
       );
-    console.log(await pmf.balanceOf(addr1.address));
-    console.log(await pmf.balanceOf(pmf.address));
+    console.log(
+      ethers.utils.formatUnits(await pmf.balanceOf(addr1.address), "ether")
+    );
+    console.log(
+      ethers.utils.formatUnits(await pmf.balanceOf(pmf.address), "ether")
+    );
   });
 
   it("should update the router address", async function () {
